@@ -116,8 +116,8 @@
         "Backend tests verify exponential can win when it generalizes better"
       ],
       "priority": 21,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented 5-fold CV for accuracy objective; AIC-based scoring for interpretability/balanced; polynomial capped at degree 4"
     },
     {
       "id": "US-022",
@@ -131,8 +131,8 @@
         "Typecheck passes"
       ],
       "priority": 22,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "calculate_metrics filters NaN/Inf; fit_curve rejects models with <80% valid coverage; heuristics log rejections"
     },
     {
       "id": "US-023",

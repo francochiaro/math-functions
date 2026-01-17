@@ -534,6 +534,56 @@ def health():
     return {"status": "healthy"}
 
 
+def compute_validation_score(x: np.ndarray, y: np.ndarray, fit_func, n_folds: int = 5) -> float:
+    """Compute k-fold cross-validation score for generalization assessment"""
+    n = len(x)
+    if n < n_folds * 2:
+        # Not enough data for k-fold, use leave-one-out style
+        n_folds = max(2, n // 2)
+
+    # Shuffle indices
+    indices = np.arange(n)
+    np.random.seed(42)  # Reproducible
+    np.random.shuffle(indices)
+
+    fold_size = n // n_folds
+    val_errors = []
+
+    for fold in range(n_folds):
+        val_start = fold * fold_size
+        val_end = val_start + fold_size if fold < n_folds - 1 else n
+
+        val_indices = indices[val_start:val_end]
+        train_indices = np.concatenate([indices[:val_start], indices[val_end:]])
+
+        if len(train_indices) < 2 or len(val_indices) < 1:
+            continue
+
+        x_train, y_train = x[train_indices], y[train_indices]
+        x_val, y_val = x[val_indices], y[val_indices]
+
+        try:
+            _, y_pred_train, _ = fit_func(x_train, y_train)
+            # Interpolate predictions for validation set
+            from scipy.interpolate import interp1d
+            interp_func = interp1d(x_train, y_pred_train, kind='linear',
+                                   fill_value='extrapolate', bounds_error=False)
+            y_pred_val = interp_func(x_val)
+
+            # Filter valid predictions
+            valid_mask = np.isfinite(y_pred_val)
+            if np.sum(valid_mask) > 0:
+                mse = np.mean((y_val[valid_mask] - y_pred_val[valid_mask]) ** 2)
+                val_errors.append(mse)
+        except Exception:
+            continue
+
+    if len(val_errors) == 0:
+        return float('inf')
+
+    return np.mean(val_errors)
+
+
 @app.post("/fit", response_model=FitResult)
 def fit_curve(request: FitRequest):
     """Fit a curve to the provided points"""
@@ -545,21 +595,23 @@ def fit_curve(request: FitRequest):
     y = np.array([p.y for p in request.points])
 
     # Define models to try based on objective
+    # Cap polynomial degree at 4 to prevent overfitting
     models = [
         ('linear', fit_linear, 1),
         ('poly2', lambda x, y: fit_polynomial(x, y, 2), 2),
         ('poly3', lambda x, y: fit_polynomial(x, y, 3), 3),
-        ('exponential', fit_exponential, 2),
+        ('exponential', fit_exponential, 3),  # Now 3 params with c shift
         ('logarithmic', fit_logarithmic, 2),
         ('power', fit_power, 2),
         ('sinusoidal', fit_sinusoidal, 4),
         ('reciprocal', fit_reciprocal_shifted, 3),
     ]
 
+    # Only add poly4 for accuracy objective, but with validation scoring
     if request.objective == 'accuracy':
         models.append(('poly4', lambda x, y: fit_polynomial(x, y, 4), 4))
         models.append(('spline', fit_spline, 5))
-        models.append(('rational', fit_rational, 3))
+        models.append(('rational', fit_rational, 4))
 
     # Fit all models and collect results
     results = []
@@ -570,14 +622,43 @@ def fit_curve(request: FitRequest):
             expr, y_pred, info = fit_func(x, y)
             metrics = calculate_metrics(y, y_pred, n_params)
 
-            # Score based on objective
+            # Check minimum valid coverage (>= 80%)
+            valid_pred_count = np.sum(np.isfinite(y_pred))
+            coverage = valid_pred_count / len(y)
+            if coverage < 0.8:
+                heuristics.append(f"{info['type']}: rejected (only {coverage*100:.0f}% valid predictions)")
+                continue
+
+            # Score based on objective with complexity-awareness
             if request.objective == 'accuracy':
-                score = metrics.r2
+                # Use validation-based scoring to prevent overfitting
+                val_mse = compute_validation_score(x, y, fit_func, n_folds=5)
+                # Convert MSE to score (lower MSE = higher score)
+                # Also incorporate AIC for tie-breaking
+                if val_mse == float('inf'):
+                    score = -999
+                else:
+                    # Primary: negative validation MSE (higher is better)
+                    # Secondary: AIC penalty for complexity
+                    aic_penalty = 0
+                    if metrics.aic is not None:
+                        aic_penalty = metrics.aic / 1000  # Scaled down
+                    score = -val_mse - aic_penalty * 0.01
+
             elif request.objective == 'interpretability':
-                # Prefer simpler models
-                score = metrics.r2 - 0.1 * info['complexity']
+                # Strongly prefer simpler models using AIC
+                if metrics.aic is not None:
+                    # Lower AIC is better, so negate it
+                    score = -metrics.aic - 0.5 * info['complexity']
+                else:
+                    score = metrics.r2 - 0.2 * info['complexity']
+
             else:  # balanced
-                score = metrics.r2 - 0.05 * info['complexity']
+                # Use AIC as primary metric (balances fit and complexity)
+                if metrics.aic is not None:
+                    score = -metrics.aic
+                else:
+                    score = metrics.r2 - 0.1 * info['complexity']
 
             results.append({
                 'name': name,
