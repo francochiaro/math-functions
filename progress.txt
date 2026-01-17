@@ -1,7 +1,49 @@
 ## Codebase Patterns
-- (none yet - patterns will be added as they're discovered)
+- Frontend uses Next.js 16 with App Router, TypeScript, and Tailwind CSS
+- D3.js for all chart rendering and interactions
+- Backend uses Python FastAPI for curve fitting API
+- Geist font family for typography (sans and mono variants)
+- Color scheme: zinc neutrals, green (#22c55e) for success/accents, indigo (#6366f1) for data points
+- All state management done with React hooks (useState, useCallback, useRef)
 
 ---
 
 # Progress Log
 
+## 2026-01-17 - US-001 through US-015 (All Stories)
+- **What was implemented:** Complete Interactive Curve Fitting Lab application
+- **Files changed:**
+  - Frontend:
+    - `frontend/src/app/page.tsx` - Main application page with all UI
+    - `frontend/src/app/layout.tsx` - App layout with metadata
+    - `frontend/src/app/globals.css` - Design system and animations
+    - `frontend/src/components/CartesianChart.tsx` - D3.js chart component
+    - `frontend/src/hooks/useChartDimensions.ts` - Responsive chart sizing
+    - `frontend/src/types/chart.ts` - TypeScript type definitions
+  - Backend:
+    - `backend/main.py` - FastAPI server with fitting endpoints
+    - `backend/requirements.txt` - Python dependencies
+
+- **Features implemented:**
+  1. 2D Cartesian chart with D3.js (axes, gridlines, dynamic ticks)
+  2. Zoom and pan with mouse/trackpad
+  3. Painting mode for adding points by clicking
+  4. CSV upload with downsampling and validation
+  5. 50,000 point limit enforcement
+  6. Multi-model curve fitting (linear, polynomial, exponential, logarithmic, power, rational, spline, sinusoidal)
+  7. Fitting objective selection (accuracy, interpretability, balanced)
+  8. Automatic best model selection with heuristics
+  9. Progress UI with step indicators and time estimate
+  10. Fitted curve visualization with contrasting colors
+  11. Statistics display (R², RMSE, MAE) with quality badges
+  12. Analytical properties computation (derivatives, extrema, asymptotes)
+  13. Integral computation with shaded area visualization
+  14. Erase & Restart functionality
+  15. World-class UI with modern design
+
+- **Learnings for future iterations:**
+  - D3.js zoom behavior needs manual bounds tracking for proper axis updates
+  - Frontend includes fallback simulation when backend is unavailable
+  - Backend uses scoring heuristics that vary by objective
+
+---

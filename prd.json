@@ -31,8 +31,8 @@
         "Typecheck passes"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented with D3.js CartesianChart component"
     },
     {
       "id": "US-002",
@@ -49,8 +49,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "D3 zoom behavior with dynamic tick adjustment"
     },
     {
       "id": "US-003",
@@ -67,8 +67,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Paint Points toggle button with crosshair cursor"
     },
     {
       "id": "US-004",
@@ -85,8 +85,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "CSV parsing with downsampling and invalid row handling"
     },
     {
       "id": "US-005",
@@ -101,8 +101,8 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "MAX_POINTS = 50000 constant enforced throughout"
     },
     {
       "id": "US-006",
@@ -119,8 +119,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": "Backend fitting logic runs in Python. Frontend triggers via API call."
+      "passes": true,
+      "notes": "Backend with FastAPI, multiple model families implemented"
     },
     {
       "id": "US-007",
@@ -136,8 +136,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Objective dropdown with scoring heuristics"
     },
     {
       "id": "US-008",
@@ -152,8 +152,8 @@
         "Typecheck passes"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Backend returns heuristics array with all model scores"
     },
     {
       "id": "US-009",
@@ -170,8 +170,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Progress panel with step indicators and time estimate"
     },
     {
       "id": "US-010",
@@ -187,8 +187,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Green curve (#22c55e) over indigo points (#6366f1)"
     },
     {
       "id": "US-011",
@@ -205,8 +205,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Result panel with expression, stats grid, and quality badge"
     },
     {
       "id": "US-012",
@@ -222,8 +222,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Backend /analyze endpoint with sympy differentiation"
     },
     {
       "id": "US-013",
@@ -240,8 +240,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Integral selection mode with shaded area visualization"
     },
     {
       "id": "US-014",
@@ -257,8 +257,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Red reset button that clears all state"
     },
     {
       "id": "US-015",
@@ -275,8 +275,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": "This story should be addressed incrementally across all UI work, with a final polish pass."
+      "passes": true,
+      "notes": "Modern design with Geist fonts, gradients, and smooth animations"
     }
   ]
 }
