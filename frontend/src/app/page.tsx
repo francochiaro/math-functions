@@ -457,7 +457,7 @@ export default function Home() {
                     <p className="text-sm font-mono break-all">{fitResult.expression}</p>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs text-zinc-500">Quality</span>
                     <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                       fitResult.quality === 'good'
@@ -468,6 +468,11 @@ export default function Home() {
                     }`}>
                       {fitResult.quality}
                     </span>
+                    {fitResult.modelType === 'Reciprocal' && (
+                      <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+                        asymptote in view
+                      </span>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-3 gap-2 text-center">

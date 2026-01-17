@@ -176,8 +176,8 @@
         "Typecheck passes"
       ],
       "priority": 25,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Orange badge shown when modelType='Reciprocal'; exponential overflow handled silently via safe_exp returning NaN"
     }
   ]
 }
