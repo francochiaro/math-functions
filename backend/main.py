@@ -2,9 +2,10 @@
 Interactive Curve Fitting Lab - Backend API
 FastAPI server for curve fitting and function analysis
 """
+from __future__ import annotations
 
 import numpy as np
-from typing import Literal
+from typing import Literal, Optional, Union
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -53,8 +54,8 @@ class FitStatistics(BaseModel):
     r2: float
     rmse: float
     mae: float
-    aic: float | None = None
-    bic: float | None = None
+    aic: Optional[float] = None
+    bic: Optional[float] = None
 
 
 class FitResult(BaseModel):
@@ -79,7 +80,7 @@ class Extremum(BaseModel):
 
 class Asymptote(BaseModel):
     type: Literal['vertical', 'horizontal', 'oblique']
-    value: float | str
+    value: Union[float, str]
 
 
 class AnalyticalProperties(BaseModel):
@@ -283,16 +284,146 @@ def fit_sinusoidal(x: np.ndarray, y: np.ndarray) -> tuple[str, np.ndarray, dict]
         return fit_linear(x, y)
 
 
-def calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray, n_params: int) -> FitStatistics:
-    """Calculate fit statistics"""
-    n = len(y_true)
+def fit_reciprocal_shifted(x: np.ndarray, y: np.ndarray) -> tuple[str, np.ndarray, dict]:
+    """Fit a shifted reciprocal model: y = a/(x - c) + d
 
-    r2 = r2_score(y_true, y_pred)
-    rmse = np.sqrt(mean_squared_error(y_true, y_pred))
-    mae = mean_absolute_error(y_true, y_pred)
+    This model captures 1/x-like relationships with horizontal and vertical shifts.
+    Returns NaN for x values where |x - c| < epsilon to avoid Infinity.
+    """
+    EPSILON = 1e-10
+
+    try:
+        def reciprocal_func(x, a, c, d):
+            """Reciprocal function with safe evaluation"""
+            denom = x - c
+            # Return large value instead of inf for fitting (scipy handles this)
+            with np.errstate(divide='ignore', invalid='ignore'):
+                result = a / denom + d
+            return result
+
+        def reciprocal_safe(x, a, c, d):
+            """Safe evaluation returning NaN near asymptote"""
+            denom = x - c
+            result = np.where(
+                np.abs(denom) < EPSILON,
+                np.nan,
+                a / denom + d
+            )
+            return result
+
+        # Estimate initial parameters
+        # c: estimate from where y changes sign or has largest gradient
+        x_sorted_idx = np.argsort(x)
+        x_sorted = x[x_sorted_idx]
+        y_sorted = y[x_sorted_idx]
+
+        # Estimate c from the x value where |dy/dx| is largest
+        if len(x_sorted) > 2:
+            dy = np.diff(y_sorted)
+            dx = np.diff(x_sorted)
+            with np.errstate(divide='ignore', invalid='ignore'):
+                gradients = np.abs(dy / dx)
+            gradients = np.nan_to_num(gradients, nan=0)
+            max_grad_idx = np.argmax(gradients)
+            c0 = (x_sorted[max_grad_idx] + x_sorted[max_grad_idx + 1]) / 2
+        else:
+            c0 = x.mean()
+
+        # d: estimate from the mean of y values far from suspected asymptote
+        mask_far = np.abs(x - c0) > (x.max() - x.min()) / 4
+        if np.sum(mask_far) > 0:
+            d0 = np.median(y[mask_far])
+        else:
+            d0 = np.median(y)
+
+        # a: estimate from y - d at a point away from asymptote
+        x_far = x[mask_far] if np.sum(mask_far) > 0 else x
+        y_far = y[mask_far] if np.sum(mask_far) > 0 else y
+        if len(x_far) > 0:
+            idx = len(x_far) // 2
+            a0 = (y_far[idx] - d0) * (x_far[idx] - c0)
+        else:
+            a0 = 1.0
+
+        # Try multiple initial guesses for c
+        c_candidates = [c0, x.min() - 0.1, x.max() + 0.1, 0.0]
+        best_result = None
+        best_residual = float('inf')
+
+        for c_init in c_candidates:
+            try:
+                # Exclude points too close to the candidate asymptote
+                mask_valid = np.abs(x - c_init) > EPSILON * 1000
+                if np.sum(mask_valid) < 3:
+                    continue
+
+                x_fit = x[mask_valid]
+                y_fit = y[mask_valid]
+
+                popt, _ = optimize.curve_fit(
+                    reciprocal_func,
+                    x_fit, y_fit,
+                    p0=[a0, c_init, d0],
+                    maxfev=5000,
+                    bounds=([-np.inf, -np.inf, -np.inf], [np.inf, np.inf, np.inf])
+                )
+
+                # Calculate residual on valid points
+                y_pred_test = reciprocal_safe(x_fit, *popt)
+                valid_mask = ~np.isnan(y_pred_test)
+                if np.sum(valid_mask) > 0:
+                    residual = np.sum((y_fit[valid_mask] - y_pred_test[valid_mask]) ** 2)
+                    if residual < best_residual:
+                        best_residual = residual
+                        best_result = popt
+            except Exception:
+                continue
+
+        if best_result is None:
+            raise ValueError("Could not fit reciprocal model")
+
+        a, c, d = best_result
+
+        # Generate predictions with NaN near asymptote
+        y_pred = reciprocal_safe(x, a, c, d)
+
+        # Build expression string
+        c_sign = "-" if c >= 0 else "+"
+        c_val = abs(c)
+        d_sign = "+" if d >= 0 else "-"
+        d_val = abs(d)
+
+        expr = f"y = {a:.4g}/(x {c_sign} {c_val:.4g}) {d_sign} {d_val:.4g}"
+
+        return expr, y_pred, {
+            'type': 'Reciprocal',
+            'complexity': 3,
+            'asymptote_x': c,
+            'params': {'a': a, 'c': c, 'd': d}
+        }
+    except Exception:
+        raise ValueError("Reciprocal fit failed")
+
+
+def calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray, n_params: int) -> FitStatistics:
+    """Calculate fit statistics, handling NaN/Inf values safely"""
+    # Filter out NaN and Inf values from predictions
+    valid_mask = np.isfinite(y_pred) & np.isfinite(y_true)
+    y_true_valid = y_true[valid_mask]
+    y_pred_valid = y_pred[valid_mask]
+
+    n = len(y_true_valid)
+
+    if n < 2:
+        # Not enough valid points
+        return FitStatistics(r2=-999.0, rmse=float('inf'), mae=float('inf'), aic=None, bic=None)
+
+    r2 = r2_score(y_true_valid, y_pred_valid)
+    rmse = np.sqrt(mean_squared_error(y_true_valid, y_pred_valid))
+    mae = mean_absolute_error(y_true_valid, y_pred_valid)
 
     # AIC and BIC
-    residuals = y_true - y_pred
+    residuals = y_true_valid - y_pred_valid
     ss_res = np.sum(residuals ** 2)
 
     if ss_res > 0 and n > n_params:
@@ -345,6 +476,7 @@ def fit_curve(request: FitRequest):
         ('logarithmic', fit_logarithmic, 2),
         ('power', fit_power, 2),
         ('sinusoidal', fit_sinusoidal, 4),
+        ('reciprocal', fit_reciprocal_shifted, 3),
     ]
 
     if request.objective == 'accuracy':
