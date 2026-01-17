@@ -99,8 +99,8 @@
         "Verify in browser: exponential model displays correctly"
       ],
       "priority": 20,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Backend returns modelType='Exponential' and expression='y = a * exp(bx) + c'; frontend displays both in result panel"
     },
     {
       "id": "US-021",
