@@ -49,8 +49,8 @@
         "Verify in browser: reciprocal curve renders correctly"
       ],
       "priority": 17,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented discontinuity detection with 50% y-range threshold; splits curve into segments at NaN/Inf and large jumps"
     },
     {
       "id": "US-018",

@@ -210,19 +210,63 @@ export function CartesianChart({
       }
     }
 
-    // Draw fitted curve
+    // Draw fitted curve with discontinuity handling
     if (fittedCurve && fittedCurve.points.length > 0) {
       const lineGenerator = d3.line<Point>()
         .x(d => x(d.x))
         .y(d => y(d.y))
         .curve(d3.curveMonotoneX);
 
-      g.append('path')
-        .datum(fittedCurve.points)
-        .attr('fill', 'none')
-        .attr('stroke', fittedCurve.color || '#22c55e')
-        .attr('stroke-width', 2.5)
-        .attr('d', lineGenerator);
+      // Split curve into segments at discontinuities (NaN, Infinity, large jumps)
+      const segments: Point[][] = [];
+      let currentSegment: Point[] = [];
+      const DISCONTINUITY_THRESHOLD = (bounds.yMax - bounds.yMin) * 0.5; // 50% of visible y-range
+
+      for (let i = 0; i < fittedCurve.points.length; i++) {
+        const point = fittedCurve.points[i];
+        const isValid = Number.isFinite(point.y) && Number.isFinite(point.x);
+
+        if (!isValid) {
+          // Point is NaN or Infinity - end current segment
+          if (currentSegment.length > 1) {
+            segments.push(currentSegment);
+          }
+          currentSegment = [];
+          continue;
+        }
+
+        // Check for discontinuity (large jump from previous point)
+        if (currentSegment.length > 0) {
+          const prevPoint = currentSegment[currentSegment.length - 1];
+          const yJump = Math.abs(point.y - prevPoint.y);
+          const xStep = Math.abs(point.x - prevPoint.x);
+
+          // If y changes by more than threshold for a small x step, it's a discontinuity
+          if (xStep > 0 && yJump > DISCONTINUITY_THRESHOLD) {
+            if (currentSegment.length > 1) {
+              segments.push(currentSegment);
+            }
+            currentSegment = [];
+          }
+        }
+
+        currentSegment.push(point);
+      }
+
+      // Add final segment
+      if (currentSegment.length > 1) {
+        segments.push(currentSegment);
+      }
+
+      // Draw each segment as a separate path
+      segments.forEach(segment => {
+        g.append('path')
+          .datum(segment)
+          .attr('fill', 'none')
+          .attr('stroke', fittedCurve.color || '#22c55e')
+          .attr('stroke-width', 2.5)
+          .attr('d', lineGenerator);
+      });
     }
 
     // Draw analytical markers
