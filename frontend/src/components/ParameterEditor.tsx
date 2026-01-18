@@ -38,9 +38,10 @@ export function ParameterEditor({
   isLoading,
   error,
 }: ParameterEditorProps) {
-  // Draft parameters for editing
+  // Draft parameters for editing (numeric values for calculations)
   const [draftParams, setDraftParams] = useState<Record<string, number>>({});
-  const [originalParams, setOriginalParams] = useState<Record<string, number>>({});
+  // Raw input strings (to allow typing "-" or "." without resetting)
+  const [rawInputs, setRawInputs] = useState<Record<string, string>>({});
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [isDirty, setIsDirty] = useState(false);
 
@@ -50,11 +51,13 @@ export function ParameterEditor({
   // Initialize parameters from schema
   useEffect(() => {
     const params: Record<string, number> = {};
+    const inputs: Record<string, string> = {};
     schema.parameters.forEach((p) => {
       params[p.name] = p.value;
+      inputs[p.name] = String(p.value);
     });
     setDraftParams(params);
-    setOriginalParams(params);
+    setRawInputs(inputs);
     setIsDirty(false);
     setValidationErrors({});
   }, [schema]);
@@ -81,27 +84,33 @@ export function ParameterEditor({
 
   // Handle parameter change
   const handleParamChange = useCallback((name: string, value: string) => {
+    // Always store the raw input to allow typing "-", ".", etc.
+    setRawInputs((prev) => ({ ...prev, [name]: value }));
+    setIsDirty(true);
+
     // Use locale-tolerant parsing (comma -> dot)
     const numValue = parseNumber(value);
     const param = schema.parameters.find((p) => p.name === name);
 
-    // Update draft (keep 0 for empty/invalid to allow continued editing)
-    setDraftParams((prev) => ({ ...prev, [name]: Number.isFinite(numValue) ? numValue : 0 }));
-    setIsDirty(true);
+    // Update numeric draft only if valid (for calculations/preview)
+    if (Number.isFinite(numValue)) {
+      setDraftParams((prev) => ({ ...prev, [name]: numValue }));
+    }
 
     // Validate
     if (param) {
-      const error = validateParam(param, numValue);
+      const validationError = validateParam(param, numValue);
       setValidationErrors((prev) => {
-        if (error) {
-          return { ...prev, [name]: error };
+        if (validationError) {
+          return { ...prev, [name]: validationError };
         }
-        const { [name]: _, ...rest } = prev;
+        const { [name]: omitted, ...rest } = prev;
+        void omitted; // Mark as intentionally unused
         return rest;
       });
     }
 
-    // Debounced preview
+    // Debounced preview (only if valid number)
     if (previewTimerRef.current) {
       clearTimeout(previewTimerRef.current);
     }
@@ -128,17 +137,19 @@ export function ParameterEditor({
     }
 
     onApply(draftParams);
-    setOriginalParams(draftParams);
     setIsDirty(false);
   }, [schema.parameters, draftParams, validateParam, onApply]);
 
   // Handle reset to original fitted values
   const handleReset = useCallback(() => {
     const params: Record<string, number> = {};
+    const inputs: Record<string, string> = {};
     schema.parameters.forEach((p) => {
       params[p.name] = p.value;
+      inputs[p.name] = String(p.value);
     });
     setDraftParams(params);
+    setRawInputs(inputs);
     setValidationErrors({});
     setIsDirty(false);
     onPreview(params);
@@ -174,7 +185,7 @@ export function ParameterEditor({
               <input
                 type="text"
                 inputMode="decimal"
-                value={draftParams[param.name] ?? 0}
+                value={rawInputs[param.name] ?? ''}
                 onChange={(e) => handleParamChange(param.name, e.target.value)}
                 className={`w-full px-3 py-2 text-sm font-mono rounded-lg bg-white dark:bg-zinc-900 border ${
                   validationErrors[param.name]
