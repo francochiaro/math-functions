@@ -967,7 +967,12 @@ def fit_curve(request: FitRequest):
         except Exception:
             y_curve = np.interp(x_curve, x, best['y_pred'])
 
-    curve_points = [Point(x=float(xi), y=float(yi)) for xi, yi in zip(x_curve, y_curve)]
+    # Filter out NaN/Infinity values that can't be serialized to JSON
+    curve_points = [
+        Point(x=float(xi), y=float(yi))
+        for xi, yi in zip(x_curve, y_curve)
+        if np.isfinite(xi) and np.isfinite(yi)
+    ]
 
     return FitResult(
         expression=best['expr'],
