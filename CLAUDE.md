@@ -105,10 +105,10 @@ Interactive Curve Fitting Lab - A local-first web app that enables advanced math
 │  │   │  (sklearn)  │ │  (deg 2-4)  │ │   y=ae^bx   │ │  y=a·ln(x)  │      │ │
 │  │   └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘      │ │
 │  │                                                                         │ │
-│  │   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐      │ │
-│  │   │    Power    │ │  Rational   │ │   Spline    │ │ Sinusoidal  │      │ │
-│  │   │   y=ax^b    │ │ (ax+b)/(cx+d)│ │   (scipy)   │ │ A·sin(Bx+C) │      │ │
-│  │   └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘      │ │
+│  │   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐                      │ │
+│  │   │    Power    │ │  Rational   │ │ Sinusoidal  │                      │ │
+│  │   │   y=ax^b    │ │ (ax+b)/(cx+d)│ │ A·sin(Bx+C) │                      │ │
+│  │   └─────────────┘ └─────────────┘ └─────────────┘                      │ │
 │  │                                                                         │ │
 │  │   Scoring: accuracy → R²  |  interpretability → R² - 0.1·complexity    │ │
 │  │                           |  balanced → R² - 0.05·complexity            │ │
@@ -184,7 +184,7 @@ math-functions/
 
 ### Backend
 - `backend/main.py` - FastAPI server with `/fit`, `/analyze`, `/integrate` endpoints
-- Model families: linear, polynomial (degree 2-4), exponential, logarithmic, power, rational, spline, sinusoidal
+- Model families: linear, polynomial (degree 2-4), exponential, logarithmic, power, rational, sinusoidal
 
 ## Running the App
 
@@ -283,7 +283,12 @@ Compute definite integral.
 - Frontend includes fallback simulation when backend is unavailable
 - D3.js zoom requires manual bounds state tracking for axis updates
 - Backend scoring heuristics vary by objective (accuracy favors complex models, interpretability penalizes complexity)
-- Spline models return "y = Spline(x)" as expression (not analytically expressible)
+
+## Recent Additions
+- **LaTeX Rendering**: Functions, derivatives, and integrals rendered with KaTeX (proper math symbols: e^{x}, fractions, superscripts)
+- **Asymptote Display**: Derivatives & Extrema card shows vertical/horizontal asymptotes for reciprocal/rational models
+- **Extrapolation**: Fitted curves extend beyond data range with dotted lines for extrapolation regions
+- **Collapsible Analysis Cards**: Derivatives & Extrema and Area Under Curve sections are collapsible
 
 ## Ralph Integration
 This project uses Ralph-style PRD tracking:

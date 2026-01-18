@@ -30,7 +30,7 @@
   3. Painting mode for adding points by clicking
   4. CSV upload with downsampling and validation
   5. 50,000 point limit enforcement
-  6. Multi-model curve fitting (linear, polynomial, exponential, logarithmic, power, rational, spline, sinusoidal)
+  6. Multi-model curve fitting (linear, polynomial, exponential, logarithmic, power, rational, sinusoidal)
   7. Fitting objective selection (accuracy, interpretability, balanced)
   8. Automatic best model selection with heuristics
   9. Progress UI with step indicators and time estimate
