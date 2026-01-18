@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { CartesianChart } from '@/components/CartesianChart';
 import { LatexRenderer, expressionToLatex, derivativeToLatex, integralToLatex } from '@/components/LatexRenderer';
+import { Tooltip, metricTooltips } from '@/components/Tooltip';
 import type { Point, FittedCurve, FittingObjective, FitResult, AnalyticalProperties, IntegralResult } from '@/types/chart';
 
 const MAX_POINTS = 50000;
@@ -479,24 +480,30 @@ export default function Home() {
                   </div>
 
                   <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="p-2 bg-white dark:bg-zinc-800 rounded">
-                      <span className="text-[10px] text-zinc-500 block">R²</span>
-                      <span className="text-sm font-mono font-semibold">
-                        {fitResult.statistics.r2.toFixed(4)}
-                      </span>
-                    </div>
-                    <div className="p-2 bg-white dark:bg-zinc-800 rounded">
-                      <span className="text-[10px] text-zinc-500 block">RMSE</span>
-                      <span className="text-sm font-mono font-semibold">
-                        {fitResult.statistics.rmse.toFixed(4)}
-                      </span>
-                    </div>
-                    <div className="p-2 bg-white dark:bg-zinc-800 rounded">
-                      <span className="text-[10px] text-zinc-500 block">MAE</span>
-                      <span className="text-sm font-mono font-semibold">
-                        {fitResult.statistics.mae.toFixed(4)}
-                      </span>
-                    </div>
+                    <Tooltip content={metricTooltips.r2} position="top">
+                      <div className="p-2 bg-white dark:bg-zinc-800 rounded cursor-help hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
+                        <span className="text-[10px] text-zinc-500 block">R²</span>
+                        <span className="text-sm font-mono font-semibold">
+                          {fitResult.statistics.r2.toFixed(4)}
+                        </span>
+                      </div>
+                    </Tooltip>
+                    <Tooltip content={metricTooltips.rmse} position="top">
+                      <div className="p-2 bg-white dark:bg-zinc-800 rounded cursor-help hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
+                        <span className="text-[10px] text-zinc-500 block">RMSE</span>
+                        <span className="text-sm font-mono font-semibold">
+                          {fitResult.statistics.rmse.toFixed(4)}
+                        </span>
+                      </div>
+                    </Tooltip>
+                    <Tooltip content={metricTooltips.mae} position="top">
+                      <div className="p-2 bg-white dark:bg-zinc-800 rounded cursor-help hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
+                        <span className="text-[10px] text-zinc-500 block">MAE</span>
+                        <span className="text-sm font-mono font-semibold">
+                          {fitResult.statistics.mae.toFixed(4)}
+                        </span>
+                      </div>
+                    </Tooltip>
                   </div>
                 </div>
               </section>
