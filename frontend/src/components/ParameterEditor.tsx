@@ -3,6 +3,22 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { ModelParameterSchema, ModelParameter } from '@/types/chart';
 
+// Helper to parse number with locale tolerance (comma as decimal separator)
+function parseNumber(raw: string | number | null | undefined): number {
+  if (raw === '' || raw === null || raw === undefined) return NaN;
+  if (typeof raw === 'number') return raw;
+  if (typeof raw === 'string') {
+    const normalized = raw.trim().replace(',', '.');
+    return Number(normalized);
+  }
+  return NaN;
+}
+
+// Helper to check if a bound is a valid finite number
+function isValidBound(value: number | null | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
 interface ParameterEditorProps {
   schema: ModelParameterSchema;
   onApply: (params: Record<string, number>) => void;
@@ -46,10 +62,11 @@ export function ParameterEditor({
     if (!Number.isFinite(value)) {
       return 'Must be a valid number';
     }
-    if (param.min !== undefined && value < param.min) {
+    // Only apply min/max validation if bounds are valid finite numbers
+    if (isValidBound(param.min) && value < param.min) {
       return `Must be at least ${param.min}`;
     }
-    if (param.max !== undefined && value > param.max) {
+    if (isValidBound(param.max) && value > param.max) {
       return `Must be at most ${param.max}`;
     }
     return null;
@@ -57,11 +74,12 @@ export function ParameterEditor({
 
   // Handle parameter change
   const handleParamChange = useCallback((name: string, value: string) => {
-    const numValue = parseFloat(value);
+    // Use locale-tolerant parsing (comma -> dot)
+    const numValue = parseNumber(value);
     const param = schema.parameters.find((p) => p.name === name);
 
-    // Update draft
-    setDraftParams((prev) => ({ ...prev, [name]: isNaN(numValue) ? 0 : numValue }));
+    // Update draft (keep 0 for empty/invalid to allow continued editing)
+    setDraftParams((prev) => ({ ...prev, [name]: Number.isFinite(numValue) ? numValue : 0 }));
     setIsDirty(true);
 
     // Validate
@@ -81,7 +99,7 @@ export function ParameterEditor({
       clearTimeout(previewTimerRef.current);
     }
 
-    if (!isNaN(numValue) && Object.keys(validationErrors).length === 0) {
+    if (Number.isFinite(numValue) && Object.keys(validationErrors).length === 0) {
       previewTimerRef.current = setTimeout(() => {
         onPreview({ ...draftParams, [name]: numValue });
       }, 150);
@@ -147,10 +165,8 @@ export function ParameterEditor({
             </div>
             <div className="relative">
               <input
-                type="number"
-                step={param.step ?? 0.1}
-                min={param.min}
-                max={param.max}
+                type="text"
+                inputMode="decimal"
                 value={draftParams[param.name] ?? 0}
                 onChange={(e) => handleParamChange(param.name, e.target.value)}
                 className={`w-full px-3 py-2 text-sm font-mono rounded-lg bg-white dark:bg-zinc-900 border ${
