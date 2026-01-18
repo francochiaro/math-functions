@@ -162,7 +162,11 @@ math-functions/
 │   │   │   ├── layout.tsx    # Root layout with fonts
 │   │   │   └── globals.css   # Design system & animations
 │   │   ├── components/
-│   │   │   └── CartesianChart.tsx  # D3.js chart component
+│   │   │   ├── CartesianChart.tsx   # D3.js chart component
+│   │   │   ├── ParameterEditor.tsx  # Parameter editing UI
+│   │   │   ├── LatexRenderer.tsx    # KaTeX math rendering
+│   │   │   ├── CollapsibleCard.tsx  # Collapsible UI sections
+│   │   │   └── Tooltip.tsx          # Metric tooltips
 │   │   ├── hooks/
 │   │   │   └── useChartDimensions.ts
 │   │   └── types/
@@ -172,7 +176,7 @@ math-functions/
 │   ├── main.py               # API endpoints & fitting logic
 │   └── requirements.txt
 ├── prd.json                  # Product requirements (Ralph format)
-└── progress.txt              # Development progress log
+└── README.md                 # User-facing documentation
 ```
 
 ## Key Files
@@ -180,11 +184,13 @@ math-functions/
 ### Frontend
 - `frontend/src/app/page.tsx` - Main application with all state management, handlers for painting, CSV upload, fitting, analysis
 - `frontend/src/components/CartesianChart.tsx` - D3.js chart with zoom/pan, point rendering, curve display, integral shading
-- `frontend/src/types/chart.ts` - TypeScript types for Point, FitResult, AnalyticalProperties, etc.
+- `frontend/src/components/ParameterEditor.tsx` - Editable parameter inputs with live preview and validation
+- `frontend/src/types/chart.ts` - TypeScript types for Point, FitResult, AnalyticalProperties, ModelParameterSchema, etc.
 
 ### Backend
-- `backend/main.py` - FastAPI server with `/fit`, `/analyze`, `/integrate` endpoints
+- `backend/main.py` - FastAPI server with `/fit`, `/analyze`, `/integrate`, `/evaluate` endpoints
 - Model families: linear, polynomial (degree 2-4), exponential, logarithmic (basic + shifted), square root (shifted), power, rational, reciprocal, sinusoidal
+- `CandidateSearchEngine` class for multi-start model selection with CV-based scoring
 
 ## Running the App
 
@@ -248,6 +254,17 @@ Compute definite integral.
   "b": 1
 }
 ```
+
+### POST /evaluate
+Evaluate a model with custom parameters (for parameter editing).
+```json
+{
+  "modelFamily": "Sinusoidal",
+  "parameters": {"A": 2.0, "B": 1.5, "C": 0.0, "D": 0.0},
+  "points": [{"x": 0, "y": 0}, {"x": 1, "y": 1}]
+}
+```
+Returns updated expression, curve points, and recalculated metrics.
 
 ## Design System
 
