@@ -123,9 +123,13 @@ export function expressionToLatex(expr: string): string {
   latex = latex.replace(/(?<![.\d])1\s*\\cdot\s*([ex])/g, '$1');
   latex = latex.replace(/(?<![.\d])1\s*\\cdot\s*\\sin/g, '\\sin');
   latex = latex.replace(/(?<![.\d])1\s*\\cdot\s*\\cos/g, '\\cos');
+  latex = latex.replace(/(?<![.\d])1\s*\\cdot\s*\\sqrt/g, '\\sqrt');
+  latex = latex.replace(/(?<![.\d])1\s*\\cdot\s*\\ln/g, '\\ln');
 
   // Clean up: handle -1 coefficient
   latex = latex.replace(/-\s*1\s*\\cdot\s*([ex])/g, '-$1');
+  latex = latex.replace(/-\s*1\s*\\cdot\s*\\sqrt/g, '-\\sqrt');
+  latex = latex.replace(/-\s*1\s*\\cdot\s*\\ln/g, '-\\ln');
 
   // Clean up double spaces
   latex = latex.replace(/\s+/g, ' ').trim();

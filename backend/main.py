@@ -493,6 +493,238 @@ def fit_reciprocal_shifted(x: np.ndarray, y: np.ndarray) -> tuple[str, np.ndarra
         raise ValueError("Reciprocal fit failed")
 
 
+def fit_sqrt_shifted(x: np.ndarray, y: np.ndarray) -> tuple[str, np.ndarray, dict]:
+    """Fit a shifted square root model: y = a * sqrt(x - c) + d
+
+    This model captures sqrt-like relationships with horizontal and vertical shifts.
+    Returns NaN for x values where x - c < 0 (domain restriction).
+    """
+    EPSILON = 1e-9
+
+    try:
+        def sqrt_func(x, a, c, d):
+            """Sqrt function for fitting"""
+            arg = x - c
+            with np.errstate(invalid='ignore'):
+                result = a * np.sqrt(np.maximum(arg, 0)) + d
+            return result
+
+        def sqrt_safe(x, a, c, d):
+            """Safe evaluation returning NaN outside domain"""
+            arg = x - c
+            result = np.where(
+                arg >= -EPSILON,
+                a * np.sqrt(np.maximum(arg, 0)) + d,
+                np.nan
+            )
+            return result
+
+        # Estimate initial parameters
+        # c: should be near or below min(x) for sqrt to be valid
+        x_min = x.min()
+        x_max = x.max()
+
+        # Try multiple c candidates
+        c_candidates = [
+            x_min - 0.1 * (x_max - x_min),  # Slightly below min
+            x_min,
+            x_min - 1.0,
+            np.percentile(x, 5) - 0.5,
+        ]
+
+        best_result = None
+        best_residual = float('inf')
+
+        for c_init in c_candidates:
+            try:
+                # Only use points where x - c >= 0
+                mask_valid = (x - c_init) >= -EPSILON
+                if np.sum(mask_valid) < 3:
+                    continue
+
+                x_fit = x[mask_valid]
+                y_fit = y[mask_valid]
+
+                # Estimate a and d using linear regression on sqrt-transformed x
+                sqrt_x = np.sqrt(np.maximum(x_fit - c_init, EPSILON))
+                if np.any(~np.isfinite(sqrt_x)):
+                    continue
+
+                # Initial estimates
+                a0 = (y_fit.max() - y_fit.min()) / (sqrt_x.max() - sqrt_x.min() + EPSILON)
+                d0 = y_fit.min()
+
+                popt, _ = optimize.curve_fit(
+                    sqrt_func,
+                    x_fit, y_fit,
+                    p0=[a0, c_init, d0],
+                    maxfev=5000,
+                    bounds=([-np.inf, -np.inf, -np.inf], [np.inf, x_min + EPSILON, np.inf])
+                )
+
+                # Calculate residual on valid points
+                y_pred_test = sqrt_safe(x_fit, *popt)
+                valid_mask = np.isfinite(y_pred_test)
+                if np.sum(valid_mask) > 0:
+                    residual = np.sum((y_fit[valid_mask] - y_pred_test[valid_mask]) ** 2)
+                    if residual < best_residual:
+                        best_residual = residual
+                        best_result = popt
+            except Exception:
+                continue
+
+        if best_result is None:
+            raise ValueError("Could not fit sqrt model")
+
+        a, c, d = best_result
+
+        # Generate predictions with NaN outside domain
+        y_pred = sqrt_safe(x, a, c, d)
+
+        # Check valid coverage
+        valid_count = np.sum(np.isfinite(y_pred))
+        if valid_count < len(x) * 0.8:
+            raise ValueError("Sqrt model has insufficient domain coverage")
+
+        # Build expression string
+        c_sign = "-" if c >= 0 else "+"
+        c_val = abs(c)
+        d_sign = "+" if d >= 0 else "-"
+        d_val = abs(d)
+
+        expr = f"y = {a:.4g} * sqrt(x {c_sign} {c_val:.4g}) {d_sign} {d_val:.4g}"
+
+        def eval_func(x_new):
+            return sqrt_safe(x_new, a, c, d)
+
+        return expr, y_pred, {
+            'type': 'Square Root',
+            'complexity': 3,
+            'domain_boundary': c,
+            'params': {'a': a, 'c': c, 'd': d},
+            'eval_func': eval_func
+        }
+    except Exception:
+        raise ValueError("Sqrt fit failed")
+
+
+def fit_log_shifted(x: np.ndarray, y: np.ndarray) -> tuple[str, np.ndarray, dict]:
+    """Fit a shifted logarithmic model: y = a * ln(x - c) + d
+
+    This model captures log-like relationships with horizontal shift.
+    Returns NaN for x values where x - c <= 0 (domain restriction).
+    """
+    EPSILON = 1e-9
+
+    try:
+        def log_func(x, a, c, d):
+            """Log function for fitting"""
+            arg = x - c
+            with np.errstate(invalid='ignore', divide='ignore'):
+                result = a * np.log(np.maximum(arg, EPSILON)) + d
+            return result
+
+        def log_safe(x, a, c, d):
+            """Safe evaluation returning NaN outside domain"""
+            arg = x - c
+            result = np.where(
+                arg > EPSILON,
+                a * np.log(arg) + d,
+                np.nan
+            )
+            return result
+
+        # Estimate initial parameters
+        # c: should be below min(x) for log to be valid
+        x_min = x.min()
+        x_max = x.max()
+
+        # Try multiple c candidates
+        c_candidates = [
+            x_min - 0.1 * (x_max - x_min),  # Below min
+            x_min - 1.0,
+            x_min - 0.5,
+            np.percentile(x, 5) - 1.0,
+            0.0 if x_min > 1 else x_min - 2.0,
+        ]
+
+        best_result = None
+        best_residual = float('inf')
+
+        for c_init in c_candidates:
+            try:
+                # Only use points where x - c > 0
+                mask_valid = (x - c_init) > EPSILON
+                if np.sum(mask_valid) < 3:
+                    continue
+
+                x_fit = x[mask_valid]
+                y_fit = y[mask_valid]
+
+                # Estimate a and d using linear regression on log-transformed x
+                log_x = np.log(x_fit - c_init)
+                if np.any(~np.isfinite(log_x)):
+                    continue
+
+                # Linear regression: y = a * log_x + d
+                model = LinearRegression()
+                model.fit(log_x.reshape(-1, 1), y_fit)
+                a0, d0 = model.coef_[0], model.intercept_
+
+                popt, _ = optimize.curve_fit(
+                    log_func,
+                    x_fit, y_fit,
+                    p0=[a0, c_init, d0],
+                    maxfev=5000,
+                    bounds=([-np.inf, -np.inf, -np.inf], [np.inf, x_min - EPSILON, np.inf])
+                )
+
+                # Calculate residual on valid points
+                y_pred_test = log_safe(x_fit, *popt)
+                valid_mask = np.isfinite(y_pred_test)
+                if np.sum(valid_mask) > 0:
+                    residual = np.sum((y_fit[valid_mask] - y_pred_test[valid_mask]) ** 2)
+                    if residual < best_residual:
+                        best_residual = residual
+                        best_result = popt
+            except Exception:
+                continue
+
+        if best_result is None:
+            raise ValueError("Could not fit log model")
+
+        a, c, d = best_result
+
+        # Generate predictions with NaN outside domain
+        y_pred = log_safe(x, a, c, d)
+
+        # Check valid coverage
+        valid_count = np.sum(np.isfinite(y_pred))
+        if valid_count < len(x) * 0.8:
+            raise ValueError("Log model has insufficient domain coverage")
+
+        # Build expression string
+        c_sign = "-" if c >= 0 else "+"
+        c_val = abs(c)
+        d_sign = "+" if d >= 0 else "-"
+        d_val = abs(d)
+
+        expr = f"y = {a:.4g} * ln(x {c_sign} {c_val:.4g}) {d_sign} {d_val:.4g}"
+
+        def eval_func(x_new):
+            return log_safe(x_new, a, c, d)
+
+        return expr, y_pred, {
+            'type': 'Logarithmic (Shifted)',
+            'complexity': 3,
+            'domain_boundary': c,
+            'params': {'a': a, 'c': c, 'd': d},
+            'eval_func': eval_func
+        }
+    except Exception:
+        raise ValueError("Log shifted fit failed")
+
+
 def calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray, n_params: int) -> FitStatistics:
     """Calculate fit statistics, handling NaN/Inf values safely"""
     # Filter out NaN and Inf values from predictions
@@ -624,6 +856,8 @@ def fit_curve(request: FitRequest):
         ('poly3', lambda x, y: fit_polynomial(x, y, 3), 3),
         ('exponential', fit_exponential, 3),  # Now 3 params with c shift
         ('logarithmic', fit_logarithmic, 2),
+        ('log_shifted', fit_log_shifted, 3),  # Shifted log: y = a*ln(x-c)+d
+        ('sqrt_shifted', fit_sqrt_shifted, 3),  # Shifted sqrt: y = a*sqrt(x-c)+d
         ('power', fit_power, 2),
         ('sinusoidal', fit_sinusoidal, 4),
         ('reciprocal', fit_reciprocal_shifted, 3),
@@ -868,6 +1102,41 @@ def compute_integral(request: IntegralRequest):
             raise
         except Exception:
             pass  # Continue even if asymptote check fails
+
+        # Check for sqrt/log domain boundaries
+        try:
+            # Find sqrt arguments and check domain
+            for sqrt_arg in expr.atoms(sp.sqrt):
+                # Get the argument inside sqrt
+                inner = sqrt_arg.args[0]
+                # Solve for when inner = 0 (domain boundary)
+                boundary_solutions = sp.solve(inner, x)
+                for bs in boundary_solutions:
+                    if bs.is_real:
+                        bs_float = float(bs)
+                        if a < bs_float:
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"Integral undefined (bounds include invalid domain for sqrt at x = {bs_float:.4g})"
+                            )
+
+            # Find log arguments and check domain
+            for log_func in expr.atoms(sp.log):
+                inner = log_func.args[0]
+                # Solve for when inner = 0 (domain boundary for log)
+                boundary_solutions = sp.solve(inner, x)
+                for bs in boundary_solutions:
+                    if bs.is_real:
+                        bs_float = float(bs)
+                        if a <= bs_float:
+                            raise HTTPException(
+                                status_code=400,
+                                detail=f"Integral undefined (bounds include invalid domain for ln at x = {bs_float:.4g})"
+                            )
+        except HTTPException:
+            raise
+        except Exception:
+            pass  # Continue even if domain check fails
 
         # Try symbolic integration first
         try:

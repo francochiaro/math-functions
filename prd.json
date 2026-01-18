@@ -237,6 +237,51 @@
       "priority": 29,
       "passes": true,
       "notes": "Added +, -, Reset buttons in top-left; viewport bounds shown in bottom-left; interaction hints in top-right"
+    },
+    {
+      "id": "US-030",
+      "epic": "E14: Square Root & Logarithmic Model Support",
+      "title": "Fit square-root curves",
+      "description": "As a user, I want the tool to fit square-root functions so that I can model relationships that grow like sqrt(x).",
+      "acceptanceCriteria": [
+        "The engine can fit y = a * sqrt(x - c) + d when dataset resembles square-root relationship",
+        "UI displays model label 'Square Root' and renders equation using √ notation",
+        "Plotted curve only renders for x values where x - c >= 0 and breaks cleanly at boundary",
+        "Model evaluation returns NaN for invalid domain inputs"
+      ],
+      "priority": 30,
+      "passes": true,
+      "notes": "Implemented fit_sqrt_shifted with multi-start c estimation; NaN-safe evaluation; 80% minimum valid coverage"
+    },
+    {
+      "id": "US-031",
+      "epic": "E14: Square Root & Logarithmic Model Support",
+      "title": "Fit logarithmic curves with shift",
+      "description": "As a user, I want the tool to fit logarithmic functions with horizontal shift so that I can model relationships that grow like ln(x).",
+      "acceptanceCriteria": [
+        "The engine can fit y = a * ln(x - c) + d when dataset resembles logarithmic relationship",
+        "UI displays model label 'Logarithmic (Shifted)' and renders equation using ln notation",
+        "Plotted curve only renders for x values where x - c > 0 and breaks cleanly at domain boundary",
+        "Model evaluation returns NaN for invalid domain inputs"
+      ],
+      "priority": 31,
+      "passes": true,
+      "notes": "Implemented fit_log_shifted with multi-start c estimation; uses LinearRegression for initial a,d estimates; NaN-safe evaluation"
+    },
+    {
+      "id": "US-032",
+      "epic": "E14: Square Root & Logarithmic Model Support",
+      "title": "Safe domain handling for sqrt/log",
+      "description": "As a user, I want the app to handle sqrt/log undefined regions safely so nothing crashes and the curve doesn't draw nonsense.",
+      "acceptanceCriteria": [
+        "Model evaluation returns NaN for undefined inputs (sqrt/log domain violations)",
+        "Plot sampling skips NaN points and breaks the curve path into valid segments",
+        "Scoring ignores invalid predictions but enforces minimum 80% valid coverage threshold",
+        "Integration refuses to compute if bounds include invalid domain and shows clear error"
+      ],
+      "priority": 32,
+      "passes": true,
+      "notes": "Domain boundary checking added to /integrate endpoint for sqrt and log; uses sp.atoms to find sqrt/log expressions"
     }
   ]
 }

@@ -102,13 +102,13 @@ Interactive Curve Fitting Lab - A local-first web app that enables advanced math
 │  │                                                                         │ │
 │  │   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐      │ │
 │  │   │   Linear    │ │ Polynomial  │ │ Exponential │ │ Logarithmic │      │ │
-│  │   │  (sklearn)  │ │  (deg 2-4)  │ │   y=ae^bx   │ │  y=a·ln(x)  │      │ │
+│  │   │  (sklearn)  │ │  (deg 2-4)  │ │   y=ae^bx   │ │ y=a·ln(x-c) │      │ │
 │  │   └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘      │ │
 │  │                                                                         │ │
-│  │   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐                      │ │
-│  │   │    Power    │ │  Rational   │ │ Sinusoidal  │                      │ │
-│  │   │   y=ax^b    │ │ (ax+b)/(cx+d)│ │ A·sin(Bx+C) │                      │ │
-│  │   └─────────────┘ └─────────────┘ └─────────────┘                      │ │
+│  │   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐      │ │
+│  │   │    Power    │ │  Rational   │ │ Sinusoidal  │ │ Square Root │      │ │
+│  │   │   y=ax^b    │ │ (ax+b)/(cx+d)│ │ A·sin(Bx+C) │ │ y=a√(x-c)+d │      │ │
+│  │   └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘      │ │
 │  │                                                                         │ │
 │  │   Scoring: accuracy → R²  |  interpretability → R² - 0.1·complexity    │ │
 │  │                           |  balanced → R² - 0.05·complexity            │ │
@@ -184,7 +184,7 @@ math-functions/
 
 ### Backend
 - `backend/main.py` - FastAPI server with `/fit`, `/analyze`, `/integrate` endpoints
-- Model families: linear, polynomial (degree 2-4), exponential, logarithmic, power, rational, sinusoidal
+- Model families: linear, polynomial (degree 2-4), exponential, logarithmic (basic + shifted), square root (shifted), power, rational, reciprocal, sinusoidal
 
 ## Running the App
 
@@ -285,10 +285,13 @@ Compute definite integral.
 - Backend scoring heuristics vary by objective (accuracy favors complex models, interpretability penalizes complexity)
 
 ## Recent Additions
-- **LaTeX Rendering**: Functions, derivatives, and integrals rendered with KaTeX (proper math symbols: e^{x}, fractions, superscripts)
+- **LaTeX Rendering**: Functions, derivatives, and integrals rendered with KaTeX (proper math symbols: e^{x}, √, ln, fractions, superscripts)
 - **Asymptote Display**: Derivatives & Extrema card shows vertical/horizontal asymptotes for reciprocal/rational models
 - **Extrapolation**: Fitted curves extend beyond data range with dotted lines for extrapolation regions
 - **Collapsible Analysis Cards**: Derivatives & Extrema and Area Under Curve sections are collapsible
+- **Square Root Model**: Fits y = a√(x-c) + d with domain handling (NaN for x < c)
+- **Logarithmic Shifted Model**: Fits y = a·ln(x-c) + d with domain handling (NaN for x ≤ c)
+- **Chart Zoom/Pan Polish**: Cursor-centered zoom, trackpad gestures, space+drag for pan in paint mode
 
 ## Ralph Integration
 This project uses Ralph-style PRD tracking:
